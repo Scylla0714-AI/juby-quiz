@@ -30,6 +30,27 @@ body{padding-bottom:80px}
 .screen{display:none}
 .screen.active{display:block;animation:fadeUp .28s ease}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+/* 結算彈窗 */
+.result-modal{position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;background:rgba(15,14,23,.85);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .3s}
+.result-modal.show{opacity:1;pointer-events:all}
+.result-card{background:var(--card);border-radius:24px;padding:24px 20px;width:calc(100% - 40px);max-width:360px;border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;gap:16px;animation:slideUp .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.result-dog{width:100px;height:auto}
+.result-dog img{width:100%}
+.result-title{font-family:"Lilita One",sans-serif;font-size:22px;color:var(--accent)}
+.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+.result-box{background:var(--card2);border-radius:12px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.05)}
+.result-val{font-family:"Lilita One",sans-serif;font-size:26px;color:var(--text)}
+.result-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+.result-rank-wrap{background:rgba(247,201,72,.08);border:1px solid rgba(247,201,72,.2);border-radius:14px;padding:14px 20px;width:100%;text-align:center}
+.result-rank-label{font-size:12px;color:var(--muted);margin-bottom:4px}
+.result-rank{font-family:"Lilita One",sans-serif;font-size:42px;color:var(--accent);line-height:1}
+.result-next{text-align:center}
+.result-next-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.result-next-cd{font-family:"Lilita One",sans-serif;font-size:20px;color:var(--text)}
+.result-btn{width:100%;padding:14px;background:var(--accent);color:#0f0e17;border:none;border-radius:12px;font-family:"Lilita One",sans-serif;font-size:17px;cursor:pointer}
+.result-btn:active{opacity:.85}
+
 .login-wrap{display:flex;flex-direction:column;align-items:center;padding-bottom:24px}
 .hero-wrap{width:100%;background:#fff;display:flex;justify-content:center}
 .hero-img{width:100%;max-width:420px;display:block}
@@ -179,6 +200,27 @@ textarea:focus,input[type=text]:focus{border-color:rgba(247,201,72,.5)}
 @keyframes burstIn{from{transform:scale(0) translateY(30px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
 @keyframes cFall{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+/* 結算彈窗 */
+.result-modal{position:fixed;inset:0;z-index:95;display:flex;align-items:center;justify-content:center;background:rgba(15,14,23,.85);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .3s}
+.result-modal.show{opacity:1;pointer-events:all}
+.result-card{background:var(--card);border-radius:24px;padding:24px 20px;width:calc(100% - 40px);max-width:360px;border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;gap:16px;animation:slideUp .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.result-dog{width:100px;height:auto}
+.result-dog img{width:100%}
+.result-title{font-family:"Lilita One",sans-serif;font-size:22px;color:var(--accent)}
+.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+.result-box{background:var(--card2);border-radius:12px;padding:12px 8px;text-align:center;border:1px solid rgba(255,255,255,.05)}
+.result-val{font-family:"Lilita One",sans-serif;font-size:26px;color:var(--text)}
+.result-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+.result-rank-wrap{background:rgba(247,201,72,.08);border:1px solid rgba(247,201,72,.2);border-radius:14px;padding:14px 20px;width:100%;text-align:center}
+.result-rank-label{font-size:12px;color:var(--muted);margin-bottom:4px}
+.result-rank{font-family:"Lilita One",sans-serif;font-size:42px;color:var(--accent);line-height:1}
+.result-next{text-align:center}
+.result-next-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.result-next-cd{font-family:"Lilita One",sans-serif;font-size:20px;color:var(--text)}
+.result-btn{width:100%;padding:14px;background:var(--accent);color:#0f0e17;border:none;border-radius:12px;font-family:"Lilita One",sans-serif;font-size:17px;cursor:pointer}
+.result-btn:active{opacity:.85}
+
 </style>
 </head>
 <body>
@@ -305,6 +347,38 @@ textarea:focus,input[type=text]:focus{border-color:rgba(247,201,72,.5)}
     <div class="to-sub" id="toSub">目前排名第一！</div>
     <div class="to-score" id="toScore">— 分</div>
     <button class="to-btn" id="btnCloseTakeover">我最強我知道！</button>
+  </div>
+</div>
+
+
+<!-- 本週結算彈窗 -->
+<div class="result-modal" id="resultModal">
+  <div class="result-card">
+    <div class="result-dog" id="resultDog"></div>
+    <div class="result-title">本輪結束！</div>
+    <div class="result-grid">
+      <div class="result-box">
+        <div class="result-val" id="resultCorrect">0</div>
+        <div class="result-lbl">答對題數</div>
+      </div>
+      <div class="result-box">
+        <div class="result-val" id="resultEarned">0</div>
+        <div class="result-lbl">本次得分</div>
+      </div>
+      <div class="result-box">
+        <div class="result-val" id="resultWeekScore">0</div>
+        <div class="result-lbl">本週累計</div>
+      </div>
+    </div>
+    <div class="result-rank-wrap">
+      <div class="result-rank-label">本週目前排名</div>
+      <div class="result-rank" id="resultRank">—</div>
+    </div>
+    <div class="result-next">
+      <div class="result-next-label">下一輪題目</div>
+      <div class="result-next-cd" id="resultNextCd">--:--:--</div>
+    </div>
+    <button class="result-btn" id="resultBtn">查看排行榜</button>
   </div>
 </div>
 
@@ -568,12 +642,70 @@ async function answer(idx, userAnswer) {
 async function checkLeaderAndFinish(){
   try{
     await checkAndSettleWeek();
-    const snap=await get(ref(db,'users'));
-    let topUid=null; let topScore=-1;
-    snap.forEach(c=>{const s=c.val().score||0; if(s>topScore){topScore=s;topUid=c.key;}});
-    if(topUid===currentUser.uid&&!takeoverShown){takeoverShown=true;showTakeover();setTimeout(()=>navTo('profile'),4000);}
-    else navTo('profile');
-  }catch(e){navTo('profile');}
+
+    // 計算本週排名
+    const wid=getWeekId();
+    const wSnap=await get(ref(db,'weeklyScores/'+wid));
+    const wRows=[];
+    if(wSnap.exists()) wSnap.forEach(c=>wRows.push({uid:c.key,score:c.val().score||0}));
+
+    // 排除管理員
+    const allSnap=await get(ref(db,'users'));
+    let adminUid=null;
+    allSnap.forEach(c=>{if(c.val().email===ADMIN_EMAIL)adminUid=c.key;});
+    const filtered=wRows.filter(r=>r.uid!==adminUid);
+    filtered.sort((a,b)=>b.score-a.score);
+
+    const myWeekSnap=await get(ref(db,'weeklyScores/'+wid+'/'+currentUser.uid));
+    const myWeekScore=myWeekSnap.exists()?myWeekSnap.val().score||0:0;
+    const myRank=filtered.findIndex(r=>r.uid===currentUser.uid)+1 || filtered.length+1;
+
+    // 檢查是否第一名
+    const isFirst=filtered.length>0 && filtered[0].uid===currentUser.uid;
+    if(isFirst && !takeoverShown){
+      takeoverShown=true;
+      showTakeover();
+      setTimeout(()=>showResultModal(myWeekScore, myRank),4200);
+    } else {
+      showResultModal(myWeekScore, myRank);
+    }
+  }catch(e){console.error(e);navTo('profile');}
+}
+
+function showResultModal(weekScore, rank){
+  // 更新數值
+  $('resultCorrect').textContent=correctCount;
+  $('resultEarned').textContent='+'+todayEarned;
+  $('resultWeekScore').textContent=weekScore;
+
+  // 排名顯示
+  const rankEl=$('resultRank');
+  if(rank===1) rankEl.textContent='🥇 第 1 名';
+  else if(rank===2) rankEl.textContent='🥈 第 2 名';
+  else if(rank===3) rankEl.textContent='🥉 第 3 名';
+  else rankEl.textContent='第 '+rank+' 名';
+
+  // 啾比圖
+  const dogEl=$('resultDog');
+  const img=document.createElement('img');
+  img.src=todayEarned>0?rnd(HAPPY_IMGS):rnd(GRUMPY_IMGS);
+  img.alt='啾比';
+  dogEl.innerHTML='';
+  dogEl.appendChild(img);
+
+  // 倒數
+  const diff=Math.max(0,sessionInfo.nextTime-Date.now());
+  const h=Math.floor(diff/3600000),m=Math.floor(diff%3600000/60000),s=Math.floor(diff%60000/1000);
+  const pad=n=>String(n).padStart(2,'0');
+  $('resultNextCd').textContent=`${pad(h)}:${pad(m)}:${pad(s)}`;
+
+  $('resultModal').classList.add('show');
+
+  // 按鈕
+  $('resultBtn').onclick=()=>{
+    $('resultModal').classList.remove('show');
+    navTo('profile');
+  };
 }
 
 function selectAnswer(val){

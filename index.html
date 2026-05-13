@@ -199,10 +199,11 @@ textarea:focus,input[type=text]:focus{border-color:rgba(247,201,72,.5)}
       <div class="login-title">啾比知識王</div>
       <div class="login-sub">每天 6:00、12:00、18:00、24:00 各出 10 題<br>是非題答對累積積分，登上排行榜！</div>
       <div class="rules-row">
-        <div class="rule-pill"><div class="icon">🕐</div><div class="txt"><strong>4 個時段</strong> — 每時段固定 10 題，30天不重複</div></div>
-        <div class="rule-pill"><div class="icon">⭕</div><div class="txt"><strong>是非題</strong> — 答對 +1；投稿題別人答對你 +1，答錯你 +3</div></div>
-        <div class="rule-pill"><div class="icon">✍️</div><div class="txt"><strong>投稿冷知識</strong> — 審核通過 +10 分</div></div>
-        <div class="rule-pill"><div class="icon">🏆</div><div class="txt"><strong>登上第一名</strong> — 啾比親自出來慶祝！</div></div>
+        <div class="rule-pill"><div class="icon">🕐</div><div class="txt"><strong>每天 4 個時段</strong> — 6:00 / 12:00 / 18:00 / 24:00，每時段 10 題，答完才能看解說</div></div>
+        <div class="rule-pill"><div class="icon">⭕</div><div class="txt"><strong>是非題計分</strong> — 答對 +1 分；投稿題別人答對你 +1，答錯你 +3（越冷門越值錢！）</div></div>
+        <div class="rule-pill"><div class="icon">✍️</div><div class="txt"><strong>投稿冷知識</strong> — 審核通過立馬 +10 分，讓大家來挑戰你的題目</div></div>
+        <div class="rule-pill"><div class="icon">📊</div><div class="txt"><strong>週排行榜</strong> — 每週一清零重新開始，週日結算當週冠軍，寫入永久名人堂</div></div>
+        <div class="rule-pill"><div class="icon">🏆</div><div class="txt"><strong>登上本週第一名</strong> — 啾比親自出來慶祝，名字永久刻入名人堂！</div></div>
       </div>
       <div class="login-cd">
         <div class="cd-lbl">⏰ 下一輪題目倒數</div>
@@ -237,7 +238,7 @@ textarea:focus,input[type=text]:focus{border-color:rgba(247,201,72,.5)}
 <div class="screen" id="scrSubmit">
   <div class="page-wrap">
     <div class="page-title">✍️ 投稿冷知識</div>
-    <div class="page-sub">出一道是非題讓大家挑戰！審核通過立得 <strong style="color:var(--accent)">+10 分</strong></div>
+    <div class="page-sub">出一道是非題讓大家挑戰！審核通過立馬 <strong style="color:var(--accent)">+10 分</strong></div>
     <div class="form-card">
       <div class="form-lbl">題目內容</div>
       <textarea id="factInput" placeholder="填寫一個有趣的是非題陳述..."></textarea>
@@ -310,7 +311,7 @@ textarea:focus,input[type=text]:focus{border-color:rgba(247,201,72,.5)}
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getDatabase, ref, get, set, update, push, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, get, set, update, push } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const ADMIN_EMAIL = 'scylla0714@gmail.com';
 const app = initializeApp({
@@ -341,6 +342,28 @@ const $ = id => document.getElementById(id);
 let currentUser = null, isAdmin = false;
 let myScore = 0, todayEarned = 0, answeredCount = 0, correctCount = 0;
 let jubyTimer = null, takeoverShown = false, selectedAnswer = null, allFacts = [];
+
+
+// 週 ID：YYYY-WNN（例如 2025-W23）
+function getWeekId(){
+  const now=new Date();
+  const mon=new Date(now);
+  mon.setHours(0,0,0,0);
+  mon.setDate(now.getDate()-(now.getDay()||7)+1); // 本週一
+  const year=mon.getFullYear();
+  const start=new Date(year,0,1);
+  const week=Math.ceil(((mon-start)/86400000+start.getDay()+1)/7);
+  return year+'-W'+String(week).padStart(2,'0');
+}
+
+// 下週一 00:00 的時間戳（週積分重置時間）
+function getWeekEnd(){
+  const now=new Date();
+  const sun=new Date(now);
+  sun.setHours(0,0,0,0);
+  sun.setDate(now.getDate()+(7-(now.getDay()||7))+1); // 下週一
+  return sun.getTime();
+}
 
 // 倒數
 function getCurrentSession() {
@@ -514,7 +537,15 @@ async function answer(idx, userAnswer) {
   myScore+=delta; todayEarned+=delta;
   $('scoreNum').textContent=myScore; $('earnedText').textContent='+'+todayEarned+' 分';
   try{
-    if(delta && !isAdmin) await update(ref(db,'users/'+currentUser.uid),{score:myScore,lastPlayed:Date.now(),name:currentUser.displayName||'玩家',avatar:currentUser.photoURL||''});
+    if(delta && !isAdmin){
+      await update(ref(db,'users/'+currentUser.uid),{score:myScore,lastPlayed:Date.now(),name:currentUser.displayName||'玩家',avatar:currentUser.photoURL||''});
+      // 週積分
+      const wid=getWeekId();
+      const wRef=ref(db,'weeklyScores/'+wid+'/'+currentUser.uid);
+      const wSnap=await get(wRef);
+      const wScore=(wSnap.exists()?wSnap.val().score||0:0)+delta;
+      await set(wRef,{score:wScore,name:currentUser.displayName||'玩家',avatar:currentUser.photoURL||'',uid:currentUser.uid});
+    }
     if(isU&&f.uid&&f.sid){
       const os=await get(ref(db,'users/'+f.uid));
       if(os.exists()){
@@ -536,8 +567,10 @@ async function answer(idx, userAnswer) {
 
 async function checkLeaderAndFinish(){
   try{
-    const snap=await get(query(ref(db,'users'),orderByChild('score'),limitToLast(1)));
-    let topUid=null; snap.forEach(c=>{topUid=c.key});
+    await checkAndSettleWeek();
+    const snap=await get(ref(db,'users'));
+    let topUid=null; let topScore=-1;
+    snap.forEach(c=>{const s=c.val().score||0; if(s>topScore){topScore=s;topUid=c.key;}});
     if(topUid===currentUser.uid&&!takeoverShown){takeoverShown=true;showTakeover();setTimeout(()=>navTo('profile'),4000);}
     else navTo('profile');
   }catch(e){navTo('profile');}
@@ -584,18 +617,82 @@ async function loadMyPosts(){
 
 async function loadLeaderboard(){
   try{
-    const snap=await get(query(ref(db,'users'),orderByChild('score'),limitToLast(20)));
-    const rows=[]; snap.forEach(c=>rows.push({uid:c.key,...c.val()})); rows.sort((a,b)=>b.score-a.score);
-    $('profileHead').innerHTML=`<div class="profile-avatar">${currentUser.photoURL?`<img src="${currentUser.photoURL}" referrerpolicy="no-referrer">`:'🐾'}</div><div><div class="profile-name">${currentUser.displayName||'玩家'}</div><div class="profile-email">${currentUser.email||''}</div><div class="profile-score">${myScore} <span>分</span></div></div>`;
+    const wid=getWeekId();
+    const weekEnd=getWeekEnd();
+    const diffMs=weekEnd-Date.now();
+    const dh=Math.floor(diffMs/3600000), dm=Math.floor(diffMs%3600000/60000), ds=Math.floor(diffMs%60000/1000);
+    const pad=n=>String(n).padStart(2,'0');
+    const countdown=`${pad(dh)}:${pad(dm)}:${pad(ds)}`;
+
+    // 個人資料 + 本週積分
+    const myWeekSnap=await get(ref(db,'weeklyScores/'+wid+'/'+currentUser.uid));
+    const myWeekScore=myWeekSnap.exists()?myWeekSnap.val().score||0:0;
+
+    $('profileHead').innerHTML=`
+      <div class="profile-avatar">${currentUser.photoURL?`<img src="${currentUser.photoURL}" referrerpolicy="no-referrer">`:'🐾'}</div>
+      <div style="flex:1">
+        <div class="profile-name">${currentUser.displayName||'玩家'}</div>
+        <div class="profile-email">${currentUser.email||''}</div>
+        <div style="display:flex;gap:16px;margin-top:6px;align-items:baseline">
+          <div><div class="profile-score">${myWeekScore} <span>本週分</span></div></div>
+          <div style="font-size:12px;color:var(--muted)">總積分 ${myScore}</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">⏰ 本週結算倒數 ${countdown}</div>
+      </div>`;
+
+    // 本週排行榜
+    const wSnap=await get(ref(db,'weeklyScores/'+wid));
+    const wRows=[];
+    if(wSnap.exists()) wSnap.forEach(c=>wRows.push({uid:c.key,...c.val()}));
+    wRows.sort((a,b)=>(b.score||0)-(a.score||0));
+    wRows.splice(20);
+
     const list=$('lbList'); list.innerHTML='';
-    const medals=['🥇','🥈','🥉'];
-    rows.forEach((u,i)=>{
-      const isMe=u.uid===currentUser.uid; const row=document.createElement('div'); row.className='lb-row';
-      row.innerHTML=`<div class="lb-rank ${i<3?'rank-'+(i+1):''}">${i<3?medals[i]:i+1}</div><div class="lb-avatar">${u.avatar?`<img src="${u.avatar}" referrerpolicy="no-referrer">`:'🐾'}</div><div class="lb-name">${u.name||'玩家'}${isMe?'<span class="lb-me-badge">你</span>':''}</div><div class="lb-score">${u.score||0} 分</div>`;
-      list.appendChild(row);
-    });
-  }catch(e){$('lbList').innerHTML='<div class="empty-state"><span class="ei">⚠️</span>載入失敗</div>';}
+
+    // 本週標題
+    const wTitle=document.createElement('div');
+    wTitle.style.cssText='font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px;padding:8px 0 10px';
+    wTitle.textContent='🏆 本週排行榜';
+    list.appendChild(wTitle);
+
+    if(!wRows.length){
+      const empty=document.createElement('div');
+      empty.className='empty-state';
+      empty.innerHTML='<span class="ei">📭</span>本週還沒有人答題';
+      list.appendChild(empty);
+    } else {
+      const medals=['🥇','🥈','🥉'];
+      wRows.forEach((u,i)=>{
+        const isMe=u.uid===currentUser.uid;
+        const row=document.createElement('div'); row.className='lb-row';
+        row.innerHTML=`<div class="lb-rank ${i<3?'rank-'+(i+1):''}">${i<3?medals[i]:i+1}</div><div class="lb-avatar">${u.avatar?`<img src="${u.avatar}" referrerpolicy="no-referrer">`:'🐾'}</div><div class="lb-name">${u.name||'玩家'}${isMe?'<span class="lb-me-badge">你</span>':''}</div><div class="lb-score">${u.score||0} 分</div>`;
+        list.appendChild(row);
+      });
+    }
+
+    // 名人堂
+    const hofSnap=await get(ref(db,'hallOfFame'));
+    if(hofSnap.exists()){
+      const hofTitle=document.createElement('div');
+      hofTitle.style.cssText='font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px;padding:16px 0 10px;border-top:1px solid rgba(255,255,255,.06);margin-top:8px';
+      hofTitle.textContent='👑 歷屆冠軍名人堂';
+      list.appendChild(hofTitle);
+      const hofs=[];
+      hofSnap.forEach(c=>hofs.push({weekId:c.key,...c.val()}));
+      hofs.sort((a,b)=>b.weekId.localeCompare(a.weekId)).slice(0,8).forEach(h=>{
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)';
+        row.innerHTML=`<div class="lb-avatar">${h.avatar?`<img src="${h.avatar}" referrerpolicy="no-referrer">`:'🐾'}</div><div style="flex:1"><div style="font-size:13px;color:var(--text)">${h.name||'玩家'}</div><div style="font-size:11px;color:var(--muted)">${h.weekId} · ${h.score}分</div></div><div style="font-size:18px">👑</div>`;
+        list.appendChild(row);
+      });
+    }
+
+  }catch(e){
+    console.error('loadLeaderboard error:',e);
+    $('lbList').innerHTML='<div class="empty-state"><span class="ei">⚠️</span>載入失敗，請重試</div>';
+  }
 }
+
 
 async function loadAdminBadge(){
   if(!isAdmin) return;
@@ -641,8 +738,16 @@ async function adminAction(sid,uid,action){
     if(action==='approve'){
       await update(ref(db,'submissions/'+sid),{status:'approved'});
       const s=await get(ref(db,'users/'+uid));
-      if(s.exists()) await update(ref(db,'users/'+uid),{score:(s.val().score||0)+10});
-      showToast('✅ 核可！投稿者獲得 +10 分');
+      if(s.exists()){
+        await update(ref(db,'users/'+uid),{score:(s.val().score||0)+10});
+        // 週積分也加 10
+        const wid=getWeekId();
+        const wRef=ref(db,'weeklyScores/'+wid+'/'+uid);
+        const wSnap=await get(wRef);
+        const wScore=(wSnap.exists()?wSnap.val().score||0:0)+10;
+        await set(wRef,{score:wScore,name:s.val().name||'玩家',avatar:s.val().avatar||'',uid});
+      }
+      showToast('✅ 核可！投稿者立即獲得 +10 分');
     }else{
       await update(ref(db,'submissions/'+sid),{status:'rejected'});
       showToast(action==='remove'?'已下架題目':'已退回投稿');
@@ -671,6 +776,34 @@ function showTakeover(){
   makeConfetti(); $('toScore').textContent=myScore+' 分';
   $('toSub').textContent=(currentUser?.displayName||'你')+' 目前排名第一！！';
   $('takeover').classList.add('active');
+}
+
+// 每週結算（在 checkLeaderAndFinish 時順便檢查）
+async function checkAndSettleWeek(){
+  // 只有週日 23:00 之後才檢查結算
+  const now=new Date();
+  if(now.getDay()!==0 || now.getHours()<23) return;
+  const wid=getWeekId();
+  const settledKey='settled_'+wid;
+  if(localStorage.getItem(settledKey)) return; // 已結算過
+
+  const wSnap=await get(ref(db,'weeklyScores/'+wid));
+  if(!wSnap.exists()) return;
+  let topUid=null, topScore=-1, topData=null;
+  wSnap.forEach(c=>{const s=c.val().score||0; if(s>topScore){topScore=s;topUid=c.key;topData=c.val();}});
+  if(!topUid) return;
+
+  // 寫入名人堂
+  await set(ref(db,'hallOfFame/'+wid),{
+    uid:topUid, name:topData.name||'玩家', avatar:topData.avatar||'', score:topScore, settledAt:Date.now()
+  });
+  // 更新用戶冠軍次數
+  const uSnap=await get(ref(db,'users/'+topUid));
+  if(uSnap.exists()){
+    const wins=(uSnap.val().championCount||0)+1;
+    await update(ref(db,'users/'+topUid),{championCount:wins});
+  }
+  localStorage.setItem(settledKey,'1');
 }
 function makeConfetti(){
   const wrap=$('confettiWrap'); wrap.innerHTML='';

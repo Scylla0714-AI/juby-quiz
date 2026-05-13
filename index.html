@@ -644,8 +644,13 @@ async function loadLeaderboard(){
     const wSnap=await get(ref(db,'weeklyScores/'+wid));
     const wRows=[];
     if(wSnap.exists()) wSnap.forEach(c=>wRows.push({uid:c.key,...c.val()}));
+    // 找管理員 uid 並排除
+    const allUsersSnap=await get(ref(db,'users'));
+    let adminUid=null;
+    allUsersSnap.forEach(c=>{if(c.val().email===ADMIN_EMAIL)adminUid=c.key;});
     wRows.sort((a,b)=>(b.score||0)-(a.score||0));
-    wRows.splice(20);
+    const wRowsFiltered=wRows.filter(r=>r.uid!==adminUid);
+    wRowsFiltered.splice(20);
 
     const list=$('lbList'); list.innerHTML='';
 
@@ -655,14 +660,14 @@ async function loadLeaderboard(){
     wTitle.textContent='🏆 本週排行榜';
     list.appendChild(wTitle);
 
-    if(!wRows.length){
+    if(!wRowsFiltered.length){
       const empty=document.createElement('div');
       empty.className='empty-state';
       empty.innerHTML='<span class="ei">📭</span>本週還沒有人答題';
       list.appendChild(empty);
     } else {
       const medals=['🥇','🥈','🥉'];
-      wRows.forEach((u,i)=>{
+      wRowsFiltered.forEach((u,i)=>{
         const isMe=u.uid===currentUser.uid;
         const row=document.createElement('div'); row.className='lb-row';
         row.innerHTML=`<div class="lb-rank ${i<3?'rank-'+(i+1):''}">${i<3?medals[i]:i+1}</div><div class="lb-avatar">${u.avatar?`<img src="${u.avatar}" referrerpolicy="no-referrer">`:'🐾'}</div><div class="lb-name">${u.name||'玩家'}${isMe?'<span class="lb-me-badge">你</span>':''}</div><div class="lb-score">${u.score||0} 分</div>`;

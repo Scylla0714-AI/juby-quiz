@@ -382,6 +382,7 @@ function navTo(tab){
   if(tab==='profile') loadLeaderboard();
   if(tab==='submit') loadMyPosts();
   if(tab==='admin') loadAdminPosts();
+  if(tab==='quiz' && isAdmin) buildCards(); // 管理員每次進答題都重置
 }
 
 // 綁定按鈕事件（不用 onclick 屬性）
@@ -453,11 +454,17 @@ async function loadFacts() {
 function buildCards() {
   const list=$('factList'); list.innerHTML='';
   answeredCount=0;correctCount=0;todayEarned=0;takeoverShown=false;
+  if(isAdmin){
+    const adminNote=document.createElement('div');
+    adminNote.style.cssText='background:rgba(247,201,72,.1);border:1px solid rgba(247,201,72,.3);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--accent)';
+    adminNote.textContent='⚙️ 管理員模式：答題不計分，不受時段限制';
+    list.appendChild(adminNote);
+  }
   $('progressFill').style.width='0';
   $('progressText').textContent='0 / '+allFacts.length+' 題完成';
   $('earnedText').textContent='+0 分';
   const doneKey='done_'+currentUser.uid+'_'+getCurrentSession().sessionKey;
-  const alreadyDone=localStorage.getItem(doneKey);
+  const alreadyDone=isAdmin?false:localStorage.getItem(doneKey);
   allFacts.forEach((f,i)=>{
     const card=document.createElement('div'); card.className='fact-card'; card.id='card-'+i;
     const isU=f.type==='user';
@@ -507,7 +514,7 @@ async function answer(idx, userAnswer) {
   myScore+=delta; todayEarned+=delta;
   $('scoreNum').textContent=myScore; $('earnedText').textContent='+'+todayEarned+' 分';
   try{
-    if(delta) await update(ref(db,'users/'+currentUser.uid),{score:myScore,lastPlayed:Date.now(),name:currentUser.displayName||'玩家',avatar:currentUser.photoURL||''});
+    if(delta && !isAdmin) await update(ref(db,'users/'+currentUser.uid),{score:myScore,lastPlayed:Date.now(),name:currentUser.displayName||'玩家',avatar:currentUser.photoURL||''});
     if(isU&&f.uid&&f.sid){
       const os=await get(ref(db,'users/'+f.uid));
       if(os.exists()){
@@ -522,7 +529,7 @@ async function answer(idx, userAnswer) {
   $('progressFill').style.width=(answeredCount/allFacts.length*100)+'%';
   $('progressText').textContent=answeredCount+' / '+allFacts.length+' 題完成';
   if(answeredCount>=allFacts.length){
-    localStorage.setItem('done_'+currentUser.uid+'_'+getCurrentSession().sessionKey,'1');
+    if(!isAdmin) localStorage.setItem('done_'+currentUser.uid+'_'+getCurrentSession().sessionKey,'1');
     setTimeout(checkLeaderAndFinish,900);
   }
 }

@@ -420,14 +420,13 @@ let jubyTimer = null, takeoverShown = false, selectedAnswer = null, allFacts = [
 
 // 週 ID：YYYY-WNN（例如 2025-W23）
 function getWeekId(){
+  // ISO 8601 week number（與 Firebase 截圖 2026-W20 一致）
   const now=new Date();
-  const mon=new Date(now);
-  mon.setHours(0,0,0,0);
-  mon.setDate(now.getDate()-(now.getDay()||7)+1); // 本週一
-  const year=mon.getFullYear();
-  const start=new Date(year,0,1);
-  const week=Math.ceil(((mon-start)/86400000+start.getDay()+1)/7);
-  return year+'-W'+String(week).padStart(2,'0');
+  const d=new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()));
+  d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));
+  const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  const week=Math.ceil((((d-yearStart)/86400000)+1)/7);
+  return d.getUTCFullYear()+'-W'+String(week).padStart(2,'0');
 }
 
 // 下週一 00:00 的時間戳（週積分重置時間）

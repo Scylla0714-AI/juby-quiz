@@ -289,6 +289,8 @@ textarea:focus,input[type=text]:focus{border-color:rgba(247,201,72,.5)}
         <div class="ans-opt" id="optTrue">⭕<span>對（True）</span></div>
         <div class="ans-opt" id="optFalse">✕<span>錯（False）</span></div>
       </div>
+      <div class="form-lbl" style="margin-top:12px">補充說明（答題後顯示）</div>
+      <textarea id="explanationInput" placeholder="告訴大家正確答案是什麼、有什麼有趣的背景知識..." style="min-height:70px"></textarea>
       <div class="form-lbl" style="margin-top:12px">來源 / 參考資料</div>
       <input type="text" id="sourceInput" placeholder="例如：維基百科、National Geographic...">
       <div class="score-info">審核通過得 <strong>+10 分</strong><br>別人答對你的題 → <strong>+1 分</strong><br>別人答錯你的題 → <strong>+3 分</strong>（你的題很難！）</div>
@@ -540,7 +542,7 @@ async function loadFacts() {
   try {
     const snap = await get(ref(db,'submissions'));
     const approved = [];
-    if(snap.exists()) snap.forEach(c=>{const d=c.val();if(d.status==='approved')approved.push({text:d.text,src:d.source,answer:d.answer,type:'user',by:d.userName,uid:d.uid,sid:c.key});});
+    if(snap.exists()) snap.forEach(c=>{const d=c.val();if(d.status==='approved')approved.push({text:d.text,src:d.source,answer:d.answer,explanation:d.explanation||'',type:'user',by:d.userName,uid:d.uid,sid:c.key});});
     const seed = sessionKey.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
     approved.sort((a,b)=>((seed*a.text.charCodeAt(0))%97)-((seed*b.text.charCodeAt(0))%97));
     pool = [...pool, ...approved.slice(0,3)];
@@ -792,8 +794,9 @@ async function submitFact(){
   if(!source){showToast('請填寫來源！');return;}
   $('btnSubmit').disabled=true;
   try{
-    await push(ref(db,'submissions'),{text,source,answer:selectedAnswer,uid:currentUser.uid,userName:currentUser.displayName||'玩家',userAvatar:currentUser.photoURL||'',status:'pending',createdAt:Date.now(),correctCount:0,wrongCount:0});
-    $('factInput').value='';$('sourceInput').value='';selectedAnswer=null;
+    const explanation=$('explanationInput').value.trim();
+    await push(ref(db,'submissions'),{text,source,explanation,answer:selectedAnswer,uid:currentUser.uid,userName:currentUser.displayName||'玩家',userAvatar:currentUser.photoURL||'',status:'pending',createdAt:Date.now(),correctCount:0,wrongCount:0});
+    $('factInput').value='';$('explanationInput').value='';$('sourceInput').value='';selectedAnswer=null;
     $('optTrue').className='ans-opt';$('optFalse').className='ans-opt';
     showToast('✅ 投稿成功！等待審核中');loadMyPosts();if(isAdmin)loadAdminBadge();
   }catch(e){showToast('投稿失敗，請再試一次');}
@@ -925,7 +928,7 @@ async function loadAdminPosts(){
     if(!pending.length){pl.innerHTML='<div class="empty-state"><span class="ei">✅</span>沒有待審核投稿</div>';}
     pending.forEach(p=>{
       const div=document.createElement('div'); div.className='admin-card';
-      div.innerHTML=`<div class="admin-text">${p.text}</div><div class="admin-ans ${p.answer?'true':'false'}">正確答案：${p.answer?'⭕ 對':'✕ 錯'}</div><div class="admin-src">來源：${p.source}</div><div class="admin-by">投稿者：${p.userName} · ${new Date(p.createdAt).toLocaleDateString('zh-TW')}</div><div class="admin-btns"><button class="btn-approve" data-sid="${p.sid}" data-uid="${p.uid}" data-action="approve">✅ 核可 +10分</button><button class="btn-reject" data-sid="${p.sid}" data-uid="${p.uid}" data-action="reject">❌ 退回</button></div>`;
+      div.innerHTML=`<div class="admin-text">${p.text}</div><div class="admin-ans ${p.answer?'true':'false'}">正確答案：${p.answer?'⭕ 對':'✕ 錯'}</div>${p.explanation?`<div class="admin-src" style="color:var(--text)">💡 ${p.explanation}</div>`:''}<div class="admin-src">來源：${p.source}</div><div class="admin-by">投稿者：${p.userName} · ${new Date(p.createdAt).toLocaleDateString('zh-TW')}</div><div class="admin-btns"><button class="btn-approve" data-sid="${p.sid}" data-uid="${p.uid}" data-action="approve">✅ 核可 +10分</button><button class="btn-reject" data-sid="${p.sid}" data-uid="${p.uid}" data-action="reject">❌ 退回</button></div>`;
       pl.appendChild(div);
     });
     // 綁定 pending 按鈕

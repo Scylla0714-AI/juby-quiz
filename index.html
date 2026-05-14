@@ -629,9 +629,16 @@ async function answer(idx, userAnswer) {
     if(isU&&f.uid&&f.sid){
       const os=await get(ref(db,'users/'+f.uid));
       if(os.exists()){
-        await update(ref(db,'users/'+f.uid),{score:(os.val().score||0)+(correct?1:3)});
+        const bonus=correct?1:3;
+        await update(ref(db,'users/'+f.uid),{score:(os.val().score||0)+bonus});
+        // 週積分也加
+        const wid2=getWeekId();
+        const wRef2=ref(db,'weeklyScores/'+wid2+'/'+f.uid);
+        const wSnap2=await get(wRef2);
+        const wScore2=(wSnap2.exists()?wSnap2.val().score||0:0)+bonus;
+        await set(wRef2,{score:wScore2,name:os.val().name||'玩家',avatar:os.val().avatar||'',uid:f.uid});
         const field=correct?'correctCount':'wrongCount';
-        await update(ref(db,'submissions/'+f.sid),{[field]:(os.val()[field]||0)+1});
+        await update(ref(db,'submissions/'+f.sid),{[field]:((wSnap2.exists()?wSnap2.val()[field]:0)||0)+1});
       }
     }
   }catch(e){console.warn(e);}

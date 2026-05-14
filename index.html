@@ -533,6 +533,8 @@ onAuthStateChanged(auth, async user => {
     await buildCards();
     showScreen('scrQuiz');
     window.scrollTo(0,0);
+    // 檢查今天是否有挑戰池
+    checkChallengeNotice();
   } else {
     currentUser=null; isAdmin=false;
     $('hdrRight').style.display='none';

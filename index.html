@@ -472,7 +472,8 @@ function getCurrentSession() {
   const isChallenge = slotIdx===4;
   const dateStr = now.toISOString().slice(0,10);
   const labels = ['24:00','6:00','12:00','18:00','21:00 挑戰池'];
-  return { sessionKey:`${dateStr}-${slotIdx}`, sessionIdx, label:`${labels[slotIdx]}`, nextTime:next.getTime(), isChallenge };
+  const nextLabels = ['6:00','12:00','18:00','21:00','24:00'];
+  return { sessionKey:`${dateStr}-${slotIdx}`, sessionIdx, label:`${labels[slotIdx]}`, nextLabel:`${nextLabels[slotIdx]}`, nextTime:next.getTime(), isChallenge };
 }
 
 let sessionInfo = getCurrentSession();
@@ -482,7 +483,7 @@ function updateCountdown() {
   const pad = n => String(n).padStart(2,'0');
   ['cdH','cdM','cdS'].forEach((id,i) => { const el=$(id); if(el) el.textContent=pad([h,m,s][i]); });
   const sc=$('sessionCountdown'); if(sc) sc.textContent=`${pad(h)}:${pad(m)}:${pad(s)}`;
-  const sl=$('sessionLabel'); if(sl) sl.textContent=`${sessionInfo.label} · 下一輪`;
+  const sl=$('sessionLabel'); if(sl) sl.textContent=`${sessionInfo.nextLabel} 時段 · 下一輪`;
   if(diff===0){sessionInfo=getCurrentSession();loadFacts().then(buildCards);}
 }
 setInterval(updateCountdown,1000); updateCountdown();

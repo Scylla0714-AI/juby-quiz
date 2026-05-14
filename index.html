@@ -1020,7 +1020,7 @@ async function checkChallengeNotice(){
     });
     if(unplayed > 0){
       hasChallengeToday = true;
-      showToast(`🎯 今天 21:00 有投稿挑戰！共 ${unplayed} 題等你來答`);
+      setTimeout(()=>showToast(`🎯 今天 21:00 有投稿挑戰！共 ${unplayed} 題等你來答`, 5000), 1500);
     }
   }catch(e){}
 }

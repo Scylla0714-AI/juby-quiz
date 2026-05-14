@@ -646,14 +646,11 @@ async function checkLeaderAndFinish(){
     const wid=getWeekId();
     const wSnap=await get(ref(db,'weeklyScores/'+wid));
     const wRows=[];
-    if(wSnap.exists()) wSnap.forEach(c=>wRows.push({uid:c.key,score:c.val().score||0}));
+    if(wSnap.exists()) wSnap.forEach(c=>wRows.push({uid:c.key,score:Number(c.val().score||0)}));
 
-    // 排除管理員
-    const allSnap=await get(ref(db,'users'));
-    let adminUid=null;
-    allSnap.forEach(c=>{if(c.val().email===ADMIN_EMAIL)adminUid=c.key;});
-    const filtered=wRows.filter(r=>r.uid!==adminUid);
-    filtered.sort((a,b)=>b.score-a.score);
+    const filtered=wRows
+      .filter(r=>r.uid!==currentUser.uid || !isAdmin)
+      .sort((a,b)=>b.score-a.score);
 
     const myWeekSnap=await get(ref(db,'weeklyScores/'+wid+'/'+currentUser.uid));
     const myWeekScore=myWeekSnap.exists()?myWeekSnap.val().score||0:0;
@@ -774,17 +771,16 @@ async function loadLeaderboard(){
     // 本週排行榜
     const wSnap=await get(ref(db,'weeklyScores/'+wid));
     const wRows=[];
-    if(wSnap.exists()) wSnap.forEach(c=>wRows.push({uid:c.key,...c.val()}));
-    // 找管理員 uid 並排除
-    const allUsersSnap=await get(ref(db,'users'));
-    let adminUid=null;
-    allUsersSnap.forEach(c=>{if(c.val().email===ADMIN_EMAIL)adminUid=c.key;});
-    console.log('週排行原始資料:', JSON.stringify(wRows));
-    console.log('管理員 uid:', adminUid);
-    wRows.sort((a,b)=>Number(b.score||0)-Number(a.score||0));
-    const wRowsFiltered=wRows.filter(r=>r.uid!==adminUid);
-    console.log('過濾後:', JSON.stringify(wRowsFiltered));
-    wRowsFiltered.splice(20);
+    if(wSnap.exists()){
+      wSnap.forEach(c=>{
+        const d=c.val()||{};
+        wRows.push({...d,uid:c.key,score:Number(d.score||0)});
+      });
+    }
+    const wRowsFiltered=wRows
+      .filter(r=>r.uid!==currentUser.uid || !isAdmin)
+      .sort((a,b)=>b.score-a.score)
+      .slice(0,20);
 
     const list=$('lbList'); list.innerHTML='';
 

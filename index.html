@@ -921,6 +921,10 @@ async function loadAdminPosts(){
       div.innerHTML=`<div class="admin-text">${p.text}</div><div class="admin-ans ${p.answer?'true':'false'}">正確答案：${p.answer?'⭕ 對':'✕ 錯'}</div><div class="admin-src">來源：${p.source}</div><div class="admin-by">投稿者：${p.userName} · ${new Date(p.createdAt).toLocaleDateString('zh-TW')}</div><div class="admin-btns"><button class="btn-approve" data-sid="${p.sid}" data-uid="${p.uid}" data-action="approve">✅ 核可 +10分</button><button class="btn-reject" data-sid="${p.sid}" data-uid="${p.uid}" data-action="reject">❌ 退回</button></div>`;
       pl.appendChild(div);
     });
+    // 綁定 pending 按鈕
+    pl.querySelectorAll('.admin-btns button').forEach(btn=>{
+      btn.addEventListener('click',()=>adminAction(btn.dataset.sid,btn.dataset.uid,btn.dataset.action));
+    });
     const al=$('approvedList'); al.innerHTML='';
     if(!approved.length){al.innerHTML='<div class="empty-state"><span class="ei">📭</span>還沒有上線題目</div>';return;}
     approved.forEach(p=>{
@@ -928,9 +932,9 @@ async function loadAdminPosts(){
       div.innerHTML=`<div class="admin-text">${p.text}</div><div class="admin-ans ${p.answer?'true':'false'}">正確答案：${p.answer?'⭕ 對':'✕ 錯'}</div><div class="admin-src">來源：${p.source}</div><div class="admin-by">投稿者：${p.userName} · 答對${p.correctCount||0}人 / 答錯${p.wrongCount||0}人</div><div class="admin-btns"><button class="btn-reject" data-sid="${p.sid}" data-uid="${p.uid}" data-action="remove">🗑 下架</button></div>`;
       al.appendChild(div);
     });
-    // 用事件委託處理 admin 按鈕
-    document.querySelectorAll('.admin-btns button').forEach(btn=>{
-      btn.addEventListener('click', ()=>adminAction(btn.dataset.sid, btn.dataset.uid, btn.dataset.action));
+    // 綁定 approved 按鈕
+    al.querySelectorAll('.admin-btns button').forEach(btn=>{
+      btn.addEventListener('click',()=>adminAction(btn.dataset.sid,btn.dataset.uid,btn.dataset.action));
     });
   }catch(e){console.error(e);}
 }
